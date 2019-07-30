@@ -1,0 +1,63 @@
+{
+	"name": "Blob_baseline_NA_Export_Generic",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_Baseline_NA_Export_Blob",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"BlobContainer": {
+				"type": "String"
+			},
+			"BlobFilePath": {
+				"type": "String"
+			},
+			"BlobFileName": {
+				"type": "String"
+			},
+			"TextQualifier": {
+				"type": "String"
+			},
+			"ColumnDelimiter": {
+				"type": "String"
+			},
+			"Encoding": {
+				"type": "string",
+				"defaultValue": "UTF-8"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().ColumnDelimiter",
+					"type": "Expression"
+				},
+				"rowDelimiter": "",
+				"quoteChar": {
+					"value": "@dataset().TextQualifier",
+					"type": "Expression"
+				},
+				"nullValue": "",
+				"encodingName": {
+					"value": "@dataset().Encoding",
+					"type": "Expression"
+				},
+				"treatEmptyAsNull": true,
+				"skipLineCount": 0,
+				"firstRowAsHeader": true
+			},
+			"fileName": {
+				"value": "@dataset().BlobFileName",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "@concat(dataset().BlobContainer,'/',dataset().BlobFilePath)",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,17 @@
+{
+	"name": "LS_Baseline_NA_SOAPAPI",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [
+			"Applicationtoken:73AF12D8-2121-4F28-8D94-9CEDB067D014",
+			"Applicationtype:Azure_WM-NA",
+			"useremail:bright.poku@groupm.com"
+		],
+		"type": "HttpServer",
+		"typeProperties": {
+			"url": "https://datafeeds.groupm.com",
+			"enableServerCertificateValidation": false,
+			"authenticationType": "Anonymous"
+		}
+	}
+}

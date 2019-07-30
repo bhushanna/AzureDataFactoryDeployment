@@ -1,0 +1,866 @@
+{
+	"name": "PL_Baseline_NA_DataExport",
+	"properties": {
+		"activities": [
+			{
+				"name": "Export Configuration",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[usp_az_Load_ConfigurationSelect_Export]",
+						"storedProcedureParameters": {
+							"ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.ID",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "SQL_Baseline_NA_Generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": "[dbo].[ExportConfiguration]"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterator for MCMCAEXPORTS",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_mcmcaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_mcmcaexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute mcmcaexport Exports",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MCMCA_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Filter_mcmcaexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'mcm-ca')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_mcmusexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'mcm-us')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_mdscaexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'mds-ca')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_mdsusexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'mds-us')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_wmusexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'wm-us')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_msxcaexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'msx-ca')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_msxusexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'msx-us')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter_wmcaexport",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Export Configuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Export Configuration').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(string(item().BlobContainerName),'wm-ca')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Iterator for mcmusexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_mcmusexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_mcmusexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute mcmusexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MCMUS_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for mdscaexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_mdscaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_mdscaexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute mdscaexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MDSCA_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for mdsusexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_mdsusexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_mdsusexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute mdsusexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MDSUS_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for wmusexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_wmusexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_wmusexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute wmusexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_WMUS_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for msxcaexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_msxcaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_msxcaexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute msxcaexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MSXCA_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for msxusexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_msxusexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_msxusexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute msxusexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_MSXUS_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterator for wmcaexport",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter_wmcaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter_wmcaexport').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute wmcaexport",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_DataExport_WMCA_Export",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ExportScript": {
+										"value": "@item().ExportScript",
+										"type": "Expression"
+									},
+									"BlobContainer": {
+										"value": "@item().BlobContainerName",
+										"type": "Expression"
+									},
+									"BlobFolderPath": {
+										"value": "@item().BlobFolderPath",
+										"type": "Expression"
+									},
+									"BlobFileName": {
+										"value": "@item().BlobFileName",
+										"type": "Expression"
+									},
+									"RawFileDelimeter": {
+										"value": "@item().RawFileDelimeter",
+										"type": "Expression"
+									},
+									"QuoteCharacter": {
+										"value": "@variables('vQuoteCharacter')",
+										"type": "Expression"
+									},
+									"Encoding": {
+										"value": "@variables('vEncoding')",
+										"type": "Expression"
+									},
+									"Export_ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"ExportName": {
+										"value": "@item().ExportName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"varFileName": {
+				"type": "String"
+			},
+			"vBlobPathForNotification": {
+				"type": "String"
+			},
+			"vQuoteCharacter": {
+				"type": "String",
+				"defaultValue": "\""
+			},
+			"vEncoding": {
+				"type": "String",
+				"defaultValue": "UTF-8"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

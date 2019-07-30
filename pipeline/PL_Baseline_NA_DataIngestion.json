@@ -1,0 +1,557 @@
+{
+	"name": "PL_Baseline_NA_DataIngestion",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fetch Data From API Configuration Table",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[usp_az_Load_ConfigurationSelect_API]",
+						"storedProcedureParameters": {
+							"ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.ID",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "SQL_Baseline_NA_Generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": "[dbo].[DataSourceConfiguration_API]"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate Data Sources",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Fetch Data From API Configuration Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Fetch Data From API Configuration Table').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Acquire Data",
+							"type": "Custom",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"command": "python3 soap_wrapper_V2_2.py",
+								"resourceLinkedService": {
+									"referenceName": "LS_Baseline_NA_Blob",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "baselinena/Common/PythonCodeFiles_v2/wrappers",
+								"extendedProperties": {
+									"feedID": {
+										"value": "@item().FeedId",
+										"type": "Expression"
+									},
+									"failOnNoData": {
+										"value": "@item().FailOnNoData",
+										"type": "Expression"
+									},
+									"ps1": {
+										"value": "@item().ParameterSetValue",
+										"type": "Expression"
+									},
+									"version": {
+										"value": "@item().Version",
+										"type": "Expression"
+									},
+									"clearBlobPath": "false"
+								},
+								"referenceObjects": {
+									"linkedServices": [
+										{
+											"referenceName": "LS_Baseline_NA_Blob",
+											"type": "LinkedServiceReference"
+										},
+										{
+											"referenceName": "LS_Baseline_NA_SOAPAPI",
+											"type": "LinkedServiceReference"
+										}
+									],
+									"datasets": [
+										{
+											"referenceName": "Blob_Baseline_NA_Generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"BlobContainer": {
+													"value": "@item().BlobContainerName",
+													"type": "Expression"
+												},
+												"BlobFilePath": {
+													"value": "@item().BlobFolderPath",
+													"type": "Expression"
+												},
+												"BlobFileName": {
+													"value": "@item().BlobFileName",
+													"type": "Expression"
+												},
+												"TextQualifier": {
+													"value": "@variables('QuoteCharacter')",
+													"type": "Expression"
+												},
+												"ColumnDelimiter": {
+													"value": "@variables('ColumnDelimeter')",
+													"type": "Expression"
+												},
+												"Encoding": "UTF-16"
+											}
+										}
+									]
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_Baseline_NA_AzureBatch",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Load Data To Stage",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Acquire Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BlobSource",
+									"recursive": false
+								},
+								"sink": {
+									"type": "SqlSink",
+									"writeBatchSize": 10000,
+									"preCopyScript": {
+										"value": "@{concat('TRUNCATE TABLE ', item().ExtractTableName)}",
+										"type": "Expression"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "Blob_Baseline_NA_Generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"BlobContainer": {
+											"value": "@item().BlobContainerName",
+											"type": "Expression"
+										},
+										"BlobFilePath": {
+											"value": "@item().BlobFolderPath",
+											"type": "Expression"
+										},
+										"BlobFileName": {
+											"value": "@activity('Acquire Data').output.customOutput.fileName",
+											"type": "Expression"
+										},
+										"TextQualifier": {
+											"value": "@variables('QuoteCharacter')",
+											"type": "Expression"
+										},
+										"ColumnDelimiter": {
+											"value": "@variables('ColumnDelimeter')",
+											"type": "Expression"
+										},
+										"Encoding": "UTF-16"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SQL_Baseline_NA_Generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@item().ExtractTableName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Archive Acuired Data",
+							"type": "Custom",
+							"dependsOn": [
+								{
+									"activity": "Load Data To Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"command": "python3  blob_archive_file_wrapper.py",
+								"resourceLinkedService": {
+									"referenceName": "LS_Baseline_NA_Blob",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "baselinena/Common/PythonCodeFiles_v2/wrappers",
+								"extendedProperties": {
+									"archivePath": {
+										"value": "@item().BlobArchivePath",
+										"type": "Expression"
+									}
+								},
+								"referenceObjects": {
+									"linkedServices": [
+										{
+											"referenceName": "LS_Baseline_NA_Blob",
+											"type": "LinkedServiceReference"
+										}
+									],
+									"datasets": [
+										{
+											"referenceName": "Blob_Baseline_NA_Generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"BlobContainer": {
+													"value": "@item().BlobContainerName",
+													"type": "Expression"
+												},
+												"BlobFilePath": {
+													"value": "@item().BlobFolderPath",
+													"type": "Expression"
+												},
+												"BlobFileName": {
+													"value": "@{activity('Acquire Data').output.customOutput.fileName}",
+													"type": "Expression"
+												},
+												"TextQualifier": {
+													"value": "@variables('QuoteCharacter')",
+													"type": "Expression"
+												},
+												"ColumnDelimiter": {
+													"value": "@variables('ColumnDelimeter')",
+													"type": "Expression"
+												},
+												"Encoding": "UTF-16"
+											}
+										}
+									]
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_Baseline_NA_AzureBatch",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "No Data Check",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Archive Acuired Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('Load Data To Stage').output.RowsCopied,0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Zero Data Notification",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": "tps://prod-29.eastus2.logic.azure.com:443/workflows/032d01cb458249fabb05766e93d72340/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yOL9--6JkMLufeNit0eda6D75ypex1LlqDfAwhwT_rM",
+											"method": "POST",
+											"headers": {
+												"Content-Type": "application/json"
+											},
+											"body": {
+												"value": "{\n\"EmailTo\":\"@{item().EmailTo}\"\n,\"EmailSubject\":\"Data Factory: @{pipeline().DataFactory} Pipeline: @{pipeline().Pipeline} having No Data Error for DataSource : @{item().DataSourceName}\"\n,\"EmailBody\":\"Hi,\\n\\nData Factory: @{pipeline().DataFactory}\\nPipeline: @{pipeline().Pipeline} for DataSource :@{item().DataSourceName} with Configuration ID : @{item().ID} having No Data Error.\n\nRecords Copied: @{activity('Load Data To Stage').output.RowsCopied}\n\nPipeline Run ID: @{pipeline().RunId}\" \n}\n",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Extracted Data",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "No Data Check",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@item().ExtractStoredProcedureName",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_Baseline_NA_SQL",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Success Notification",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Extracted Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_az_Load_UpdateStatus_API]",
+								"storedProcedureParameters": {
+									"ID": {
+										"value": {
+											"value": "@item().ID",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Success",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_Baseline_NA_SQL",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Failure Notification",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Extracted Data",
+									"dependencyConditions": [
+										"Failed",
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_az_Load_UpdateStatus_API]",
+								"storedProcedureParameters": {
+									"ID": {
+										"value": {
+											"value": "@item().ID",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Failure",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_Baseline_NA_SQL",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Success Notifications",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Extracted Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_SendNotification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"EmailSubject": {
+										"value": "@concat('Data Factory : ', pipeline().DataFactory, ' Pipeline : ', pipeline().Pipeline, ' execution is Successful')",
+										"type": "Expression"
+									},
+									"EmailBody": {
+										"value": "@concat('Hi,\\n\\nData Factory : ',pipeline().DataFactory,'\\nPipeline : ', pipeline().Pipeline, '\\nPipeline Run ID : ', pipeline().RunId,'\\nPipeline Trigger Name : ', pipeline().TriggerName,'\\nPipeline Trigger Type : ',pipeline().TriggerType,'\\nConfiguration ID : ',item().ID,'\\nRecord count(s) : ',activity('Load Data To Stage').output.RowsCopied,'\\nDataSourceName : ',item().DataSourceName)",
+										"type": "Expression"
+									},
+									"EmailCC": " ",
+									"BlobPath": {
+										"value": "@variables('vBlobPathForNotification')",
+										"type": "Expression"
+									},
+									"FileName": " "
+								}
+							}
+						},
+						{
+							"name": "Failure Notifications",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Extracted Data",
+									"dependencyConditions": [
+										"Failed",
+										"Skipped"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_Baseline_NA_SendNotification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"EmailTo": {
+										"value": "@item().EmailTo",
+										"type": "Expression"
+									},
+									"EmailSubject": {
+										"value": "@concat('Data Factory : ', pipeline().DataFactory, ' Pipeline : ', pipeline().Pipeline, ' execution Failed')",
+										"type": "Expression"
+									},
+									"EmailBody": {
+										"value": "@concat('Hi,\\n\\nData Factory : ',pipeline().DataFactory,'\\nPipeline : ', pipeline().Pipeline, '\\nPipeline Run ID : ', pipeline().RunId,'\\nPipeline Trigger Name : ', pipeline().TriggerName,'\\nPipeline Trigger Type : ',pipeline().TriggerType,'\\nDataSourceName : ',item().DataSourceName,'\\nConfiguration ID : ',item().ID,'\\n\\nOne of the activities has failed.\\nPlease check the pipeline run on the monitor page for error details.')",
+										"type": "Expression"
+									},
+									"EmailCC": " ",
+									"BlobPath": {
+										"value": "@variables('vBlobPathForNotification')",
+										"type": "Expression"
+									},
+									"FileName": " "
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ID": {
+				"type": "String"
+			}
+		},
+		"variables": {
+			"ColumnDelimeter": {
+				"type": "String",
+				"defaultValue": "\t"
+			},
+			"QuoteCharacter": {
+				"type": "String"
+			},
+			"vBlobPathForNotification": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

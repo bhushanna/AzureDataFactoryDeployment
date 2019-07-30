@@ -1,0 +1,24 @@
+{
+	"name": "SQL_Baseline_NA_Generic",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_Baseline_NA_SQL",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,36 @@
+{
+	"name": "TRG_MDS_CA_Indigo Canada",
+	"properties": {
+		"description": "Used to Trigger PL_Baseline_NA_API Pipeline.\nSchedule is 10:00:00 AM EST (Daily)",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PL_Baseline_NA_DataIngestion",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"ID": "41,58,74,91"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2018-11-27T12:35:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

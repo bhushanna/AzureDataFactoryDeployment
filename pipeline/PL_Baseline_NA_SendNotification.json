@@ -1,0 +1,98 @@
+{
+	"name": "PL_Baseline_NA_SendNotification",
+	"properties": {
+		"activities": [
+			{
+				"name": "SendNotification_LogicApp",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-29.eastus2.logic.azure.com:443/workflows/032d01cb458249fabb05766e93d72340/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yOL9--6JkMLufeNit0eda6D75ypex1LlqDfAwhwT_rM",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "{\n\"EmailTo\":\"@{pipeline().parameters.EmailTo}\"\n,\"EmailSubject\":\"@{pipeline().parameters.EmailSubject}\"\n,\"EmailBody\":\"@{pipeline().parameters.EmailBody}\"\n,\"EmailCC\":\"@{pipeline().parameters.EmailCC}\"\n,\"BlobPath\":\"@{pipeline().parameters.BlobPath}\"\n,\"FileName\":\"@{pipeline().parameters.FileName}\"\n}\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Condition",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "SendNotification_LogicApp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@Contains(toLower(pipeline().parameters.EmailSubject),'failed')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Failed Activity",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "tps://prod-29.eastus2.logic.azure.com:443/workflows/032d01cb458249fabb05766e93d72340/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yOL9--6JkMLufeNit0eda6D75ypex1LlqDfAwhwT_rM",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"body": {
+									"value": "{\n\"EmailTo\":\"@{pipeline().parameters.EmailTo}\"\n,\"EmailSubject\":\"@{pipeline().parameters.EmailSubject}\"\n,\"EmailBody\":\"@{pipeline().parameters.EmailBody}\"\n,\"EmailCC\":\"@{pipeline().parameters.EmailCC}\"\n,\"BlobPath\":\"@{pipeline().parameters.BlobPath}\"\n,\"FileName\":\"@{pipeline().parameters.FileName}\"\n}\n",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"EmailTo": {
+				"type": "String"
+			},
+			"EmailSubject": {
+				"type": "String"
+			},
+			"EmailBody": {
+				"type": "String"
+			},
+			"EmailCC": {
+				"type": "String"
+			},
+			"BlobPath": {
+				"type": "String"
+			},
+			"FileName": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

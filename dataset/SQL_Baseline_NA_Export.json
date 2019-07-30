@@ -1,0 +1,16 @@
+{
+	"name": "SQL_Baseline_NA_Export",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_Baseline_NA_SQL",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": "[dbo].[ExportConfiguration]"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

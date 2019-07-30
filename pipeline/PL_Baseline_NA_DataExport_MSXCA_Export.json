@@ -1,0 +1,290 @@
+{
+	"name": "PL_Baseline_NA_DataExport_MSXCA_Export",
+	"properties": {
+		"activities": [
+			{
+				"name": "Export to msxcaexport",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.04:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@pipeline().parameters.ExportScript",
+							"type": "Expression"
+						}
+					},
+					"sink": {
+						"type": "BlobSink"
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SQL_Baseline_NA_Export",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Blob_baseline_NA_Export_msxcaexport",
+						"type": "DatasetReference",
+						"parameters": {
+							"BlobContainer": {
+								"value": "@pipeline().parameters.BlobContainer",
+								"type": "Expression"
+							},
+							"BlobFilePath": {
+								"value": "@pipeline().parameters.BlobFolderPath",
+								"type": "Expression"
+							},
+							"BlobFileName": {
+								"value": "@pipeline().parameters.BlobFileName",
+								"type": "Expression"
+							},
+							"TextQualifier": {
+								"value": "@pipeline().parameters.QuoteCharacter",
+								"type": "Expression"
+							},
+							"ColumnDelimiter": {
+								"value": "@pipeline().parameters.RawFileDelimeter",
+								"type": "Expression"
+							},
+							"Encoding": "UTF-8"
+						}
+					}
+				]
+			},
+			{
+				"name": "Success Notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Export to msxcaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_Baseline_NA_SendNotification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.EmailTo",
+							"type": "Expression"
+						},
+						"EmailSubject": {
+							"value": "@concat('Data Factory : ', pipeline().DataFactory, ' Pipeline : ', pipeline().Pipeline, ' execution is Successful for Export  : ',pipeline().parameters.ExportName)",
+							"type": "Expression"
+						},
+						"EmailBody": {
+							"value": "@concat('Hi,\\n\\nData Factory : ',pipeline().DataFactory,'\\nPipeline : ', pipeline().Pipeline, '\\nPipeline Run ID : ', pipeline().RunId,'\\nPipeline Trigger Name : ', pipeline().TriggerName,'\\nPipeline Trigger Type : ',pipeline().TriggerType,'\\nExport : ',pipeline().parameters.ExportName,' is Successful')",
+							"type": "Expression"
+						},
+						"EmailCC": " ",
+						"BlobPath": {
+							"value": "@variables('vBlobPathForNotification')",
+							"type": "Expression"
+						},
+						"FileName": " "
+					}
+				}
+			},
+			{
+				"name": "Failure Notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Export to msxcaexport",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_Baseline_NA_SendNotification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.EmailTo",
+							"type": "Expression"
+						},
+						"EmailSubject": {
+							"value": "@concat('Data Factory : ', pipeline().DataFactory, ' Pipeline : ', pipeline().Pipeline, ' execution Failed for Export : ',pipeline().parameters.ExportName)",
+							"type": "Expression"
+						},
+						"EmailBody": {
+							"value": "@concat('Hi,\\n\\nData Factory : ',pipeline().DataFactory,'\\nPipeline : ', pipeline().Pipeline, '\\nPipeline Run ID : ', pipeline().RunId,'\\nPipeline Trigger Name : ', pipeline().TriggerName,'\\nPipeline Trigger Type : ',pipeline().TriggerType,'\\n\\nOne of the activities has failed for Export ',pipeline().parameters.ExportName,'\\nPlease check the pipeline run on the monitor page for error details.')",
+							"type": "Expression"
+						},
+						"EmailCC": " ",
+						"BlobPath": {
+							"value": "@variables('vBlobPathForNotification')",
+							"type": "Expression"
+						},
+						"FileName": " "
+					}
+				}
+			},
+			{
+				"name": "Update Success Status",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Export to msxcaexport",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_az_Load_UpdateStatus_ExportConfiguration]",
+					"storedProcedureParameters": {
+						"ErrorMsg": {
+							"value": null,
+							"type": "String"
+						},
+						"ID": {
+							"value": {
+								"value": "@pipeline().parameters.Export_ID",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"RecordCount": {
+							"value": {
+								"value": "@activity('Export to msxcaexport').output.RowsCopied",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Success",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SQL_ExportData",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Update Failure Status",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Export to msxcaexport",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_az_Load_UpdateStatus_ExportConfiguration]",
+					"storedProcedureParameters": {
+						"ErrorMsg": {
+							"value": {
+								"value": "@activity('Export to msxcaexport').output.errors[0].Message",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ID": {
+							"value": {
+								"value": "@pipeline().parameters.Export_ID",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"RecordCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Failure",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SQL_ExportData",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"ExportScript": {
+				"type": "string"
+			},
+			"BlobContainer": {
+				"type": "string"
+			},
+			"BlobFolderPath": {
+				"type": "string"
+			},
+			"BlobFileName": {
+				"type": "string"
+			},
+			"RawFileDelimeter": {
+				"type": "string"
+			},
+			"QuoteCharacter": {
+				"type": "string"
+			},
+			"Encoding": {
+				"type": "string"
+			},
+			"Export_ID": {
+				"type": "int"
+			},
+			"EmailTo": {
+				"type": "string"
+			},
+			"ExportName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"vBlobPathForNotification": {
+				"type": "String",
+				"defaultValue": " "
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
